@@ -10,19 +10,26 @@ from sklearn.metrics import accuracy_score
 from sklearn import preprocessing
 
 #infile = 'C:/Users/wgree/Documents/Work/MultiNB/Tom_Step1_out2.csv'
-infile = 'C:/Users/Wyatt Green/Downloads/Tom_Step1_out2.csv'
-data = "V1V2V3"
-labels = "V4"
+#infile = 'C:/Users/Wyatt Green/Downloads/Tom_Step1_out2.csv'
+infile = 'C:/Users/Wyatt Green/Downloads/spamEmails.csv'
+#data = "V1V2V3"
+#labels = "V4"
+data = 'v2'
+labels = 'v1'
+
 
 
 class Classifier():
     def __init__(self):
+        #train_set and test_set are the entire sets of the dataset, including variables and class label
         self.train_set, self.test_set = self.load_data()
-        self.counts, self.test_counts = self.vectorize()
+        #train_counts and test_counts are the frequency of words in the dataset
+        self.train_counts, self.test_counts = self.vectorize()
+        self.train_encodedLbls, self.test_encodedLbls = self.encodeClassLabels()
         self.classifier = self.train_model()
 
     def load_data(self):
-        df = pd.read_csv(infile, header=0, error_bad_lines=False, sep = '|')
+        df = pd.read_csv(infile, header=0, error_bad_lines=False, sep = '|', engine = 'python')
         train_set, test_set = train_test_split(df, test_size=.3)
         return train_set, test_set
     
@@ -32,25 +39,40 @@ class Classifier():
                                      sublinear_tf=True,
                                      ngram_range = (1,2),
                                      use_idf=True)
-        counts = vectorizer.fit_transform(self.train_set[data])
+        train_counts = vectorizer.fit_transform(self.train_set[data])
         test_counts = vectorizer.transform(self.test_set[data])
-        return counts, test_counts
+        return train_counts, test_counts 
+    
+    def encodeClassLabels(self):
+        trainTargets = preprocessing.LabelEncoder().fit_transform(self.train_set[labels])
+        testTargets = preprocessing.LabelEncoder().fit_transform(self.test_set[labels])
+        return trainTargets, testTargets
 
     def train_model(self):
         classifier = MultinomialNB()
-        trainTargets = self.train_set[labels]
-        labelEncoding = preprocessing.LabelEncoder()
-        encodedLabels = labelEncoding.fit_transform(trainTargets)
-        classifier.fit(self.counts, encodedLabels)
+        
+        #trainTargets = self.train_set[labels]
+        #labelEncoding = preprocessing.LabelEncoder()
+        #encodedLabels = labelEncoding.fit_transform(trainTargets)
+
+        classifier.fit(self.train_counts, self.train_encodedLbls)
         return classifier
 
     def evaluate(self):
-        testTargets = self.test_set[labels]
-        labelEncoding = preprocessing.LabelEncoder()
-        encodedLbls = labelEncoding.fit_transform(testTargets)
+        
+        #testTargets = self.test_set[labels]
+        #labelEncoding = preprocessing.LabelEncoder()
+        #encodedLbls = labelEncoding.fit_transform(testTargets)
+        
         predictions = self.classifier.predict(self.test_counts)
-        print (classification_report(encodedLbls, predictions))
-        print ("The accuracy score is {:.2%}".format(accuracy_score(encodedLbls, predictions)))
+        print (classification_report(self.test_encodedLbls, predictions))
+        print ("The accuracy score is {:.2%}".format(accuracy_score(self.test_encodedLbls, predictions)))
+        counter = 0
+        for x in range(len(self.test_encodedLbls)):
+            if(self.test_encodedLbls[x] == predictions[x]):
+                counter = counter + 1
+        print("Number of labels predicted correctly:" , counter)
+        print("Number of total predictions:" , len(predictions))
 
     def classify(self, input):
         input_text = input
